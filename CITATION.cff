@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "Se você usar este software, cite-o como abaixo."
+title: "Tratamento de Superfície por Material: protocolo de peça, dente e cimentação para lentes e laminados"
+type: software
+version: 0.1.0
+date-released: 2026-10-20
+doi: 10.6084/m9.figshare.34716696
+license: MIT
+repository-code: "https://github.com/mborille/tratamento-superficie-material"
+authors:
+  - family-names: Borille
+    given-names: Marcelo Barboza
+    orcid: "https://orcid.org/0009-0000-5422-207X"
+keywords:
+  - odontologia
+  - cimentação adesiva
+  - lentes de contato dentais
+  - tratamento de superfície
+  - ácido fluorídrico
+  - zircônia
+  - open source software
+abstract: "Monta o protocolo de tratamento de superfície da peça, do dente e da cimentação conforme o material restaurador (feldspática, leucita, dissilicato de lítio, silicato de lítio com zircônia, cerâmica híbrida, resina CAD/CAM e zircônia), com cronômetro e avisos. Aplicativo HTML independente. Ferramenta de estudo; os valores são usuais da literatura e a instrução do fabricante prevalece."

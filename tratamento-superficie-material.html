@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tratamento de Superfície por Material</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: foto grande à esquerda, painel de medição à direita; empilha no celular.
+   Linguagem: Apple (tipografia do sistema, superfícies agrupadas, controles segmentados, azul do sistema). */
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #f2f2f7;
+  --line: rgba(60, 60, 67, 0.16);
+  --fg: #1d1d1f;
+  --fg-dim: #6e6e73;
+  --accent: #0071e3;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+  --seg-thumb: #ffffff;
+  --card-c: #8e8e93;
+  --tooth-c: #ff9f0a;
+  --ref-c: #30b0c7;
+  --ok: #248a3d;
+  --warn: #b25000;
+  --bad: #d70015;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 28px rgba(0, 0, 0, 0.06);
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-data: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e; --line: rgba(84, 84, 88, 0.55);
+    --fg: #f5f5f7; --fg-dim: #98989d; --accent: #0a84ff; --accent-ink: #ffffff; --accent-soft: rgba(10, 132, 255, 0.2);
+    --seg-thumb: #636366; --card-c: #aeaeb2; --tooth-c: #ff9f0a; --ref-c: #64d2ff;
+    --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a; --shadow: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #1c1c1e; --surface-2: #2c2c2e; --line: rgba(84, 84, 88, 0.55);
+  --fg: #f5f5f7; --fg-dim: #98989d; --accent: #0a84ff; --accent-ink: #ffffff; --accent-soft: rgba(10, 132, 255, 0.2);
+  --seg-thumb: #636366; --card-c: #aeaeb2; --tooth-c: #ff9f0a; --ref-c: #64d2ff;
+  --ok: #30d158; --warn: #ff9f0a; --bad: #ff453a; --shadow: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.47 var(--font-body); -webkit-font-smoothing: antialiased;
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1160px; margin: 0 auto; display: grid; gap: 24px; }
+header h1 { font: 700 40px/1.08 var(--font-display); letter-spacing: -0.022em; margin: 0 0 10px; text-wrap: balance; }
+header p { margin: 0; color: var(--fg-dim); font-size: 17px; line-height: 1.47; max-width: 56ch; }
+.example-banner {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 12px 16px; border-radius: 14px; color: var(--fg);
+  background: var(--accent-soft); font-size: 14px;
+}
+.example-banner[hidden] { display: none; }
+.app { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 880px) { .app { grid-template-columns: minmax(0, 1fr); } header h1 { font-size: 34px; } }
+.col { display: grid; gap: 20px; min-width: 0; }
+.panel { background: var(--surface); border-radius: 20px; padding: 22px; min-width: 0; box-shadow: var(--shadow); }
+.panel h2 { font: 600 19px/1.2 var(--font-display); letter-spacing: -0.012em; margin: 0 0 16px; color: var(--fg); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+button, .btn, select, input[type="text"], input[type="number"] {
+  font: inherit; color: var(--fg); background: var(--surface-2); border: 0;
+  border-radius: 10px; padding: 8px 14px; min-height: 40px;
+}
+button, .btn {
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 500; border-radius: 980px; padding: 8px 18px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+button:hover, .btn:hover { opacity: 0.82; }
+button:active, .btn:active { transform: scale(0.98); }
+button:focus-visible, .btn:focus-within, input:focus-visible, select:focus-visible, canvas:focus-visible, summary:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 1px;
+}
+button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.seg { display: flex; gap: 2px; padding: 2px; margin-bottom: 14px; background: var(--surface-2); border-radius: 11px; }
+.seg button {
+  flex: 1 1 0; min-width: 0; background: transparent; color: var(--fg); border-radius: 9px; padding: 7px 8px;
+  font-size: 14px; font-weight: 500; min-height: 34px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.seg button[aria-pressed="true"] { background: var(--seg-thumb); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.04); font-weight: 600; }
+.seg button:hover { opacity: 1; }
+.dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.dot.card { background: var(--card-c); } .dot.tooth { background: var(--tooth-c); } .dot.ref { background: var(--ref-c); }
+.step { font-size: 12px; color: var(--fg-dim); font-weight: 500; }
+.stage { position: relative; background: #000; border-radius: 14px; overflow: hidden; }
+canvas#view { display: block; width: 100%; touch-action: none; cursor: crosshair; }
+.hint { margin: 12px 2px 0; color: var(--fg-dim); font-size: 14px; min-height: 20px; }
+.tips summary { cursor: pointer; font: 600 17px/1.3 var(--font-display); letter-spacing: -0.01em; list-style: none; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; }
+.tips summary::-webkit-details-marker { display: none; }
+.tips summary::after { content: "›"; font-size: 24px; color: var(--fg-dim); transition: transform 0.2s ease; }
+.tips details[open] summary::after { transform: rotate(90deg); }
+.tips ul { margin: 12px 0 0; padding-left: 18px; color: var(--fg-dim); font-size: 15px; }
+.tips li { margin: 5px 0; }
+
+.swatches { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sw { border-radius: 14px; overflow: hidden; background: var(--surface-2); }
+.sw .chip { height: 96px; background: var(--surface-2); }
+.sw .cap { padding: 8px 12px; font-size: 13px; color: var(--fg-dim); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.sw .cap b { color: var(--fg); font-family: var(--font-data); font-weight: 500; font-size: 12px; }
+.de-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 20px 0 10px; }
+.de-num { font: 600 60px/1 var(--font-display); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.de-unit { color: var(--fg-dim); font-size: 15px; font-weight: 500; }
+.pill { padding: 4px 12px; border-radius: 99px; font-size: 13px; font-weight: 600; background: color-mix(in srgb, currentColor 14%, transparent); }
+.pill.ok { color: var(--ok); } .pill.warn { color: var(--warn); } .pill.bad { color: var(--bad); } .pill.none { color: var(--fg-dim); }
+.scale { position: relative; height: 6px; background: var(--surface-2); border-radius: 3px; margin: 8px 0 26px; }
+.scale .fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--fg-dim); }
+.scale .fill.ok { background: var(--ok); } .scale .fill.warn { background: var(--warn); } .scale .fill.bad { background: var(--bad); }
+.scale .tick { position: absolute; top: -3px; bottom: -3px; width: 2px; border-radius: 1px; background: var(--fg); opacity: 0.35; }
+.scale .tick span { position: absolute; top: 18px; left: 50%; transform: translateX(-50%); font: 12px var(--font-body); color: var(--fg-dim); white-space: nowrap; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 9px 4px; border-bottom: 0.5px solid var(--line); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+th:first-child, td:first-child { text-align: left; }
+th { font: 500 12px var(--font-body); color: var(--fg-dim); }
+td { font: 15px var(--font-display); }
+td:first-child { color: var(--fg-dim); font-size: 14px; }
+ul.warns { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+ul.warns li { padding: 10px 12px 10px 34px; position: relative; background: var(--surface-2); font-size: 14px; border-radius: 12px; }
+ul.warns li::before { content: ""; position: absolute; left: 14px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+ul.warns li.good::before { background: var(--ok); }
+.mono { font-family: var(--font-data); font-size: 12px; color: var(--fg-dim); }
+.fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.fields label, .field { display: grid; gap: 6px; font-size: 13px; color: var(--fg-dim); }
+.fields input, .field input, .field select { width: 100%; color: var(--fg); font-size: 16px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.row > * { min-width: 0; }
+input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 40px; background: transparent; padding: 0; }
+input[type="checkbox"] { accent-color: var(--accent); width: 18px; height: 18px; }
+input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.note { color: var(--fg-dim); font-size: 13px; line-height: 1.45; margin: 12px 0 0; }
+textarea#csvBox { width: 100%; min-height: 92px; font: 12px/1.45 var(--font-data); color: var(--fg); background: var(--surface-2); border: 0; border-radius: 12px; padding: 12px; resize: vertical; margin-top: 12px; }
+figure.report { margin: 16px 0 0; }
+figure.report img { width: 100%; max-width: 420px; height: auto; border-radius: 12px; display: block; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12); }
+figure.report figcaption { color: var(--fg-dim); font-size: 13px; margin-top: 8px; }
+.empty { color: var(--fg-dim); font-size: 14px; margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .scale .fill { transition: width 0.3s ease; } }
+@media (prefers-reduced-motion: reduce) { button, .btn, .tips summary::after { transition: none; } }
+
+.app { grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); }
+@media (max-width: 880px) { .app { grid-template-columns: minmax(0, 1fr); } }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; margin-top: 4px; cursor: pointer; }
+.check input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--accent); }
+.grp { margin: 16px 0 0; }
+.grp h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-dim); margin: 0 0 8px; font-weight: 600; }
+ol.stepl { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ol.stepl li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 10px 12px; background: var(--surface-2); border-radius: 12px; font-size: 14px; line-height: 1.45; }
+ol.stepl li.done { opacity: 0.55; }
+ol.stepl li.done .tx { text-decoration: line-through; }
+ol.stepl input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--accent); }
+.tx .opt { color: var(--fg-dim); font-size: 12px; font-weight: 600; margin-right: 6px; }
+.tm { margin-top: 8px; padding: 6px 14px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tm.run { background: var(--warn); color: #fff; }
+.tm.end { background: var(--ok); color: #fff; }
+li.hf .tx { font-weight: 600; }
+#cmpTab td, #cmpTab th { padding: 9px 6px; white-space: normal; text-align: left; font-size: 13px; vertical-align: top; }
+#cmpTab tr.sel td { background: var(--accent-soft); }
+#cmpTab tbody tr { cursor: pointer; }
+#cmpTab td:first-child { font-weight: 600; }
+.hint:empty { display: none; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Tratamento de Superfície por Material</h1>
+    <p>Escolha o material da lente ou laminado, o substrato do dente e o cimento. O app monta o passo a passo de peça, dente e cimentação, com cronômetro nos passos com tempo e avisos do que evitar.</p>
+  </header>
+
+  <div class="banner" role="note"><span><strong>Ferramenta de estudo.</strong> Os tempos e as pressões são valores usuais da literatura e de instruções de fabricantes comuns, reunidos para consulta rápida. Não foram validados em bancada por este projeto. A instrução de uso do produto que você está usando sempre prevalece, e o julgamento clínico não é substituído por esta ferramenta.</span></div>
+
+  <div class="app">
+    <div class="col">
+      <section class="panel" aria-labelledby="h-cfg">
+        <h2 id="h-cfg">1. Material e situação</h2>
+        <div class="field"><label for="selMat">Material da restauração</label><select id="selMat"></select></div>
+        <p class="note" id="matEx"></p>
+        <div id="concBox">
+          <p class="note" style="margin-bottom:6px">Concentração do ácido fluorídrico</p>
+          <div class="seg" role="group" aria-label="Concentração do ácido fluorídrico">
+            <button type="button" id="c5" aria-pressed="true">5%</button>
+            <button type="button" id="c10" aria-pressed="false">9 a 10%</button>
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px"><label for="selSub">Substrato do dente</label><select id="selSub"></select></div>
+        <div class="field"><label for="selCim">Cimento</label><select id="selCim"></select></div>
+        <label class="check"><input type="checkbox" id="chkCont"> A peça foi provada com saliva ou pasta de prova</label>
+      </section>
+
+      <section class="panel" aria-labelledby="h-cmp">
+        <h2 id="h-cmp">Resumo por material</h2>
+        <div class="tablewrap"><table id="cmpTab"></table></div>
+        <p class="note">HF é ácido fluorídrico. Toque numa linha para trocar o material.</p>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel" aria-labelledby="h-prot">
+        <h2 id="h-prot">2. Passo a passo</h2>
+        <p class="note" id="totNote"></p>
+        <div id="steps"></div>
+        <ul class="warns" id="warns"></ul>
+        <div class="btnrow" style="margin-top:14px">
+          <button type="button" id="btnCopy">Copiar protocolo</button>
+          <button type="button" id="btnReset">Desmarcar tudo</button>
+        </div>
+        <p class="hint" id="copyMsg" role="status"></p>
+      </section>
+
+      <section class="panel tips">
+        <details><summary>Base e limites</summary>
+          <ul>
+            <li>Vitrocerâmicas e porcelanas (feldspática, leucita, dissilicato, silicato de lítio): o ácido fluorídrico dissolve a fase vítrea e cria microrretenções, e o silano liga a cerâmica ao cimento resinoso. O tempo muda com o material porque a quantidade de fase vítrea muda.</li>
+            <li>Zircônia não tem fase vítrea: a união depende de limpeza, jateamento leve e de um monômero fosfatado (MDP) que se liga ao óxido. Silano isolado não resolve.</li>
+            <li>Resinas CAD/CAM e cerâmica infiltrada por polímero respondem a jateamento ou ácido, conforme o material, seguidos de silano.</li>
+            <li>No dente, o esmalte condicionado com ácido fosfórico é o substrato mais confiável para lentes. Dentina exposta exige mais cuidado com o adesivo e com o selamento.</li>
+            <li>Apoio de leitura: Tian et al., Dent Mater 2014 (união de cimentos resinosos a vitrocerâmicas); Blatz et al., J Dent Res 2018 (efeito da cimentação adesiva em cerâmicas de alta resistência); Özcan e Bernasconi, J Adhes Dent 2015 (adesão à zircônia). Confira as referências antes de citar.</li>
+            <li>Este app não considera marca, lote, validade, umidade, luz do ambiente nem a espessura da peça. Ele não é uma recomendação de conduta para um caso específico.</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+"use strict";
+// ---------- Núcleo: protocolo de tratamento de superfície por material restaurador ----------
+// Valores baseados em protocolos descritos na literatura e em instruções de fabricantes comuns.
+// Conferir sempre a instrução de uso do produto em mãos.
+var MATERIALS = [
+  { id: 'fels', nome: 'Porcelana feldspática', ex: 'Vita Mark II, porcelana estratificada sobre refratário', fam: 'vitro',
+    hf: { 5: 90, 10: 60 }, silano: true, ultra: true,
+    evitar: ['Condicionar além do tempo: o excesso de ácido deixa a superfície com microfissuras e enfraquece a lente fina.'] },
+  { id: 'leu', nome: 'Vitrocerâmica reforçada por leucita', ex: 'IPS Empress Esthetic, IPS Empress CAD', fam: 'vitro',
+    hf: { 5: 60, 10: 60 }, silano: true, ultra: true,
+    evitar: ['Condicionar além do tempo indicado pelo fabricante.'] },
+  { id: 'dis', nome: 'Dissilicato de lítio', ex: 'IPS e.max Press, IPS e.max CAD', fam: 'vitro',
+    hf: { 5: 20, 10: 20 }, silano: true, ultra: false,
+    evitar: ['Passar de 20 s: o dissilicato é condicionado por menos tempo que as feldspáticas e o excesso fragiliza a superfície.', 'Ácido fosfórico não substitui o fluorídrico nesta cerâmica.'] },
+  { id: 'zls', nome: 'Silicato de lítio reforçado com zircônia', ex: 'Celtra Duo, Suprinity', fam: 'vitro',
+    hf: { 5: 30, 10: 30 }, silano: true, ultra: false,
+    evitar: ['Trocar o tempo sem ler a instrução do fabricante: varia entre produtos.'] },
+  { id: 'pic', nome: 'Cerâmica infiltrada por polímero', ex: 'Vita Enamic', fam: 'hibrido',
+    hf: { 5: 60, 10: 60 }, silano: true, ultra: false,
+    evitar: ['Jatear em alta pressão: a fase polimérica é mais frágil que a cerâmica.'] },
+  { id: 'res', nome: 'Resina CAD/CAM e resina indireta', ex: 'Lava Ultimate, Cerasmart, Brilliant Crios', fam: 'resina',
+    hf: null, abr: { tam: '50 µm (óxido de alumínio)', mpa: '0,1 a 0,2', seg: 10 }, silano: true, ultra: false,
+    evitar: ['Ácido fluorídrico: não é o método indicado para estes materiais, e a resina não responde como uma vitrocerâmica.'] },
+  { id: 'zir', nome: 'Zircônia (Y-TZP)', ex: 'Zircônia monolítica translúcida, infraestrutura de zircônia', fam: 'zirconia',
+    hf: null, abr: { tam: '50 µm (óxido de alumínio)', mpa: '0,1 a 0,25', seg: 10 }, silano: false, mdp: true, ultra: false,
+    evitar: ['Ácido fluorídrico: não condiciona a zircônia e é só risco.', 'Silano sozinho: não cria união durável com a zircônia. Use primer com MDP.', 'Jateamento forte demais: pode gerar trincas na zircônia.'] }
+];
+var SUBSTRATES = [
+  { id: 'esm', nome: 'Esmalte' },
+  { id: 'mis', nome: 'Esmalte com áreas de dentina exposta' },
+  { id: 'den', nome: 'Predominantemente dentina' }
+];
+var CEMENTS = [
+  { id: 'foto', nome: 'Cimento resinoso fotopolimerizável' },
+  { id: 'dual', nome: 'Cimento resinoso dual' }
+];
+function byId(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
+function fmtSec(s) { return s >= 60 && s % 60 === 0 ? (s / 60) + ' min' : s + ' s'; }
+
+// opts: { mat, conc (5|10), contaminada (bool), sub, cim }
+function buildProtocol(o) {
+  var m = byId(MATERIALS, o.mat), sub = byId(SUBSTRATES, o.sub), cim = byId(CEMENTS, o.cim);
+  if (!m || !sub || !cim) return null;
+  var conc = o.conc === 10 ? 10 : 5;
+  var piece = [], tooth = [], cement = [], warns = [];
+  if (o.contaminada) {
+    if (m.fam === 'zirconia') piece.push({ t: 'Limpar a peça contaminada na prova (saliva, pasta de prova): limpador alcalino à base de zircônia por cerca de 20 s, lavar e secar. Se a contaminação for forte, repetir o jateamento.', s: 20 });
+    else if (m.fam === 'resina') piece.push({ t: 'Limpar a peça contaminada: lavar com água, secar e, se preciso, repetir o jateamento leve antes do silano.', s: null });
+    else piece.push({ t: 'Limpar a peça contaminada na prova (saliva, pasta de prova): ácido fosfórico a 37% por 20 a 60 s, ou limpador alcalino por cerca de 20 s, conforme o fabricante. Lavar e secar. Não condicionar de novo com ácido fluorídrico só por causa da contaminação.', s: null });
+  }
+  if (m.hf) {
+    var sec = m.hf[conc];
+    piece.push({ t: 'Condicionar a face interna da peça com ácido fluorídrico a ' + conc + '%, só fora da boca, por ' + fmtSec(sec) + '.', s: sec, hf: true });
+    piece.push({ t: 'Lavar com spray de água por 60 s, de preferência após neutralizar o ácido, e secar com ar livre de óleo. A superfície deve ficar fosca e esbranquiçada.', s: 60 });
+    if (m.ultra) piece.push({ t: 'Banho em ultrassom com água ou álcool por 5 min para soltar resíduos do condicionamento.', s: 300, opt: true });
+  } else if (m.abr) {
+    piece.push({ t: 'Jatear a face interna com partículas de ' + m.abr.tam + ', pressão de ' + m.abr.mpa + ' MPa, ponta a cerca de 10 mm, por cerca de ' + m.abr.seg + ' s, em movimentos contínuos.', s: m.abr.seg });
+    piece.push({ t: 'Remover os resíduos com jato de ar e, se quiser, ultrassom em álcool por 3 min. Secar.', s: null });
+  }
+  if (m.silano) piece.push({ t: 'Aplicar silano na face interna, aguardar 60 s e secar com jato de ar suave (ar morno acelera a evaporação do solvente).', s: 60 });
+  if (m.mdp) piece.push({ t: 'Aplicar o primer para zircônia com MDP em camada fina, aguardar o tempo do fabricante e secar suavemente. Se o cimento já contém MDP, siga a instrução dele sobre ainda usar o primer.', s: null });
+  piece.push({ t: 'Manter a peça protegida de luz e de contaminação até o assentamento.', s: null });
+
+  tooth.push({ t: 'Profilaxia do dente com pasta sem flúor e sem óleo, lavar e secar. Isolamento do campo conforme a técnica.', s: null });
+  if (sub.id === 'esm') tooth.push({ t: 'Condicionar o esmalte com ácido fosfórico a 35 a 37% por 30 s.', s: 30 });
+  else if (sub.id === 'mis') {
+    tooth.push({ t: 'Condicionar o esmalte com ácido fosfórico a 35 a 37% por 15 s.', s: 15 });
+    tooth.push({ t: 'Estender o ácido à dentina por mais 15 s (esmalte 30 s no total, dentina 15 s).', s: 15 });
+  } else tooth.push({ t: 'Condicionar a dentina com ácido fosfórico a 35 a 37% por 15 s, sem passar do tempo.', s: 15 });
+  tooth.push({ t: 'Lavar por 30 s e secar sem ressecar a dentina (superfície brilhante, sem poças).', s: 30 });
+  tooth.push({ t: 'Aplicar o adesivo conforme o fabricante, friccionando, e volatilizar o solvente. Camada fina: adesivo grosso impede o assentamento completo. Fotopolimerizar o adesivo no dente apenas se o fabricante do cimento indicar.', s: null });
+  if (sub.id !== 'esm') warns.push('Dentina exposta: se o preparo foi selado logo depois de feito (selamento imediato da dentina), limpe a camada selada antes de cimentar, como orienta o seu protocolo.');
+
+  cement.push({ t: 'Aplicar o cimento na peça, assentar com pressão leve e remover os excessos' + (cim.id === 'foto' ? ' antes de polimerizar.' : ' antes de polimerizar ou conforme o tempo de presa do cimento dual.'), s: null });
+  cement.push({ t: 'Aplicar gel de glicerina nas margens e fotopolimerizar por todas as faces, com o tempo e a potência do fabricante do cimento e do aparelho. Em lentes finas a luz atravessa bem, mas o tempo curto compromete a conversão.', s: null });
+  cement.push({ t: 'Remover o gel, conferir margens e oclusão, acabar e polir.', s: null });
+
+  if (m.hf) warns.push('Ácido fluorídrico é tóxico e corrosivo. Use só fora da boca, com luvas, óculos e pó ou líquido neutralizador à mão, e descarte conforme a orientação do fabricante.');
+  m.evitar.forEach(function (e) { warns.push(e); });
+  warns.push('Tempos e pressões são valores usuais da literatura e de instruções de fabricantes. A instrução do produto em uso prevalece.');
+  var total = 0; [piece, tooth, cement].forEach(function (g) { g.forEach(function (st) { if (st.s && !st.opt) total += st.s; }); });
+  return { material: m, substrate: sub, cement: cim, conc: conc, groups: [{ nome: 'Peça (face interna)', steps: piece }, { nome: 'Dente', steps: tooth }, { nome: 'Cimentação', steps: cement }], warns: warns, totalSec: total };
+}
+function compareRows() {
+  return MATERIALS.map(function (m) {
+    var cond = m.hf ? ('HF ' + (m.hf[5] === m.hf[10] ? '5 a 10% por ' + fmtSec(m.hf[5]) : '5% por ' + fmtSec(m.hf[5]) + ' ou 10% por ' + fmtSec(m.hf[10]))) : ('Jateamento ' + m.abr.mpa + ' MPa');
+    return { id: m.id, nome: m.nome, cond: cond, uniao: m.mdp ? 'Primer com MDP' : 'Silano' };
+  });
+}
+function summaryText(p) {
+  var L = [p.material.nome + ' | ' + p.substrate.nome + ' | ' + p.cement.nome];
+  p.groups.forEach(function (g) { L.push(''); L.push(g.nome + ':'); g.steps.forEach(function (s, i) { L.push((i + 1) + '. ' + s.t); }); });
+  L.push(''); L.push('Avisos:'); p.warns.forEach(function (w) { L.push('- ' + w); });
+  L.push(''); L.push('Ferramenta de estudo. A instrução do fabricante prevalece.');
+  return L.join('\n');
+}
+
+// ---------- Interface ----------
+function $(id) { return document.getElementById(id); }
+function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; }
+var STATE = { mat: 'dis', conc: 5, sub: 'esm', cim: 'foto', cont: false };
+var timers = {}, lastP = null;
+
+function fillSelect(id, list) { var s = $(id); list.forEach(function (x) { var o = el('option', '', x.nome); o.value = x.id; s.appendChild(o); }); }
+function stopTimers() { Object.keys(timers).forEach(function (k) { clearInterval(timers[k]); }); timers = {}; }
+function mmss(s) { var m = Math.floor(s / 60), r = s % 60; return m + ':' + (r < 10 ? '0' : '') + r; }
+
+function startTimer(btn, sec, key, chk) {
+  if (timers[key]) { clearInterval(timers[key]); delete timers[key]; btn.className = 'tm'; btn.textContent = 'Iniciar ' + mmss(sec); return; }
+  var left = sec; btn.className = 'tm run'; btn.textContent = mmss(left) + ' (toque para parar)';
+  timers[key] = setInterval(function () {
+    left--;
+    if (left <= 0) {
+      clearInterval(timers[key]); delete timers[key];
+      btn.className = 'tm end'; btn.textContent = 'Tempo!';
+      try { if (navigator.vibrate) navigator.vibrate([250, 100, 250]); } catch (e) {}
+      if (chk && !chk.checked) { chk.checked = true; chk.dispatchEvent(new Event('change')); }
+    } else btn.textContent = mmss(left) + ' (toque para parar)';
+  }, 1000);
+}
+function render() {
+  stopTimers();
+  var m = byId(MATERIALS, STATE.mat);
+  $('matEx').textContent = 'Exemplos: ' + m.ex + '.';
+  $('concBox').hidden = !m.hf;
+  $('c5').setAttribute('aria-pressed', STATE.conc === 5); $('c10').setAttribute('aria-pressed', STATE.conc === 10);
+  var p = buildProtocol({ mat: STATE.mat, conc: STATE.conc, contaminada: STATE.cont, sub: STATE.sub, cim: STATE.cim });
+  lastP = p;
+  $('totNote').textContent = ('Tempo cronometrado somado: cerca de ' + (Math.round(p.totalSec / 6) / 10) + ' min, sem contar os passos opcionais.').replace('.', ',');
+  var box = $('steps'); box.textContent = '';
+  p.groups.forEach(function (g, gi) {
+    var d = el('div', 'grp'); d.appendChild(el('h3', '', g.nome));
+    var ol = el('ol', 'stepl');
+    g.steps.forEach(function (s, si) {
+      var li = el('li', s.hf ? 'hf' : '');
+      var cb = el('input'); cb.type = 'checkbox'; cb.setAttribute('aria-label', 'Passo concluído');
+      cb.onchange = function () { li.className = (s.hf ? 'hf ' : '') + (cb.checked ? 'done' : ''); };
+      var right = el('div'); var tx = el('div', 'tx');
+      if (s.opt) tx.appendChild(el('span', 'opt', 'OPCIONAL'));
+      tx.appendChild(document.createTextNode(s.t)); right.appendChild(tx);
+      if (s.s) { var b = el('button', 'tm', 'Iniciar ' + mmss(s.s)); b.type = 'button'; var key = gi + '-' + si; b.onclick = function () { startTimer(b, s.s, key, cb); }; right.appendChild(b); }
+      li.appendChild(cb); li.appendChild(right); ol.appendChild(li);
+    });
+    d.appendChild(ol); box.appendChild(d);
+  });
+  var w = $('warns'); w.textContent = ''; p.warns.forEach(function (t) { w.appendChild(el('li', '', t)); });
+  // tabela
+  var tb = $('cmpTab'); tb.textContent = '';
+  var th = el('thead'), tr = el('tr'); ['Material', 'Condicionamento', 'União'].forEach(function (h) { tr.appendChild(el('th', '', h)); }); th.appendChild(tr); tb.appendChild(th);
+  var tbd = el('tbody'); compareRows().forEach(function (r) {
+    var row = el('tr', r.id === STATE.mat ? 'sel' : ''); row.tabIndex = 0;
+    [r.nome, r.cond, r.uniao].forEach(function (t) { row.appendChild(el('td', '', t)); });
+    var go = function () { STATE.mat = r.id; $('selMat').value = r.id; render(); };
+    row.onclick = go; row.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+    tbd.appendChild(row);
+  }); tb.appendChild(tbd);
+}
+function init() {
+  fillSelect('selMat', MATERIALS); fillSelect('selSub', SUBSTRATES); fillSelect('selCim', CEMENTS);
+  $('selMat').value = STATE.mat;
+  $('selMat').onchange = function () { STATE.mat = this.value; render(); };
+  $('selSub').onchange = function () { STATE.sub = this.value; render(); };
+  $('selCim').onchange = function () { STATE.cim = this.value; render(); };
+  $('chkCont').onchange = function () { STATE.cont = this.checked; render(); };
+  $('c5').onclick = function () { STATE.conc = 5; render(); }; $('c10').onclick = function () { STATE.conc = 10; render(); };
+  $('btnReset').onclick = function () { render(); };
+  $('btnCopy').onclick = function () {
+    var t = summaryText(lastP), msg = $('copyMsg');
+    function ok() { msg.textContent = 'Protocolo copiado.'; } 
+    function fallback() { var a = el('textarea'); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); ok(); } catch (e) { msg.textContent = 'Não foi possível copiar. Selecione o texto da lista e copie.'; } a.remove(); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fallback); else fallback();
+  };
+  render();
+}
+init();
+
+})();
+</script>
+</body>
+</html>
